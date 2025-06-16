@@ -1,32 +1,39 @@
+
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import ImageCanvas from '@/components/editor/ImageCanvas';
 import ChatInterface from '@/components/editor/ChatInterface';
 import Logo from '@/components/common/Logo';
 import { Button } from '@/components/ui/button';
-import { Home, UploadCloud, Loader2 } from 'lucide-react';
+import { Home, UploadCloud, Loader2, Undo, Redo } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
-const DEFAULT_PLACEHOLDER_IMAGE = "https://placehold.co/800x600.png?text=Start+Editing!"; // data-ai-hint will be on ImageCanvas component
+const DEFAULT_PLACEHOLDER_IMAGE = "https://placehold.co/800x600.png?text=Start+Editing!";
+const MAX_HISTORY_SIZE = 10;
 
 export default function EditorPage() {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [isLoadingPersistence, setIsLoadingPersistence] = useState(true); // For localStorage loading
-  const [isGlobalLoading, setIsGlobalLoading] = useState(false); // For AI operations
+  const [isLoadingPersistence, setIsLoadingPersistence] = useState(true);
+  const [isGlobalLoading, setIsGlobalLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+
+  const [history, setHistory] = useState<string[]>([]);
+  const [currentHistoryIndex, setCurrentHistoryIndex] = useState<number>(-1);
 
   useEffect(() => {
     try {
       const storedImage = localStorage.getItem('uploadedImageURI_v2');
-      if (storedImage) {
-        setImageSrc(storedImage);
-      } else {
-        // If no image in local storage, set a default placeholder or guide user
-        setImageSrc(DEFAULT_PLACEHOLDER_IMAGE);
+      let initialImage = storedImage || DEFAULT_PLACEHOLDER_IMAGE;
+      
+      setImageSrc(initialImage);
+      setHistory([initialImage]);
+      setCurrentHistoryIndex(0);
+
+      if (!storedImage) {
         toast({
           title: "No Uploaded Image Found",
           description: "Starting with a placeholder. You can describe your desired image to the AI or upload a new one.",
@@ -34,7 +41,9 @@ export default function EditorPage() {
       }
     } catch (error) {
       console.error("Error accessing localStorage:", error);
-      setImageSrc(DEFAULT_PLACEHOLDER_IMAGE); // Fallback if localStorage fails
+      setImageSrc(DEFAULT_PLACEHOLDER_IMAGE);
+      setHistory([DEFAULT_PLACEHOLDER_IMAGE]);
+      setCurrentHistoryIndex(0);
       toast({
         title: "Storage Access Error",
         description: "Could not access local image storage. Using a placeholder.",
@@ -44,10 +53,10 @@ export default function EditorPage() {
     setIsLoadingPersistence(false);
   }, [toast]);
 
-  const handleImageUpdate = (newImageSrc: string) => {
+  const updateImageAndHistory = useCallback((newImageSrc: string) => {
     setImageSrc(newImageSrc);
     try {
-      localStorage.setItem('uploadedImageURI_v2', newImageSrc); // Update localStorage
+      localStorage.setItem('uploadedImageURI_v2', newImageSrc);
     } catch (error) {
       console.error("Error saving updated image to localStorage:", error);
       toast({
@@ -56,7 +65,47 @@ export default function EditorPage() {
         variant: "destructive",
       });
     }
-  };
+
+    setHistory(prevHistory => {
+      const newHistoryBase = prevHistory.slice(0, currentHistoryIndex + 1);
+      let updatedHistory = [...newHistoryBase, newImageSrc];
+      if (updatedHistory.length > MAX_HISTORY_SIZE) {
+        updatedHistory = updatedHistory.slice(-MAX_HISTORY_SIZE);
+      }
+      setCurrentHistoryIndex(updatedHistory.length - 1);
+      return updatedHistory;
+    });
+  }, [currentHistoryIndex, toast]);
+
+
+  const handleUndo = useCallback(() => {
+    if (currentHistoryIndex > 0) {
+      const newIndex = currentHistoryIndex - 1;
+      setCurrentHistoryIndex(newIndex);
+      const newImageSrc = history[newIndex];
+      setImageSrc(newImageSrc);
+      try {
+        localStorage.setItem('uploadedImageURI_v2', newImageSrc);
+      } catch (error) {
+        console.error("Error saving undone image to localStorage:", error);
+      }
+    }
+  }, [currentHistoryIndex, history]);
+
+  const handleRedo = useCallback(() => {
+    if (currentHistoryIndex < history.length - 1) {
+      const newIndex = currentHistoryIndex + 1;
+      setCurrentHistoryIndex(newIndex);
+      const newImageSrc = history[newIndex];
+      setImageSrc(newImageSrc);
+      try {
+        localStorage.setItem('uploadedImageURI_v2', newImageSrc);
+      } catch (error) {
+        console.error("Error saving redone image to localStorage:", error);
+      }
+    }
+  }, [currentHistoryIndex, history]);
+
 
   if (isLoadingPersistence) {
     return (
@@ -67,18 +116,27 @@ export default function EditorPage() {
     );
   }
 
+  const canUndo = currentHistoryIndex > 0;
+  const canRedo = currentHistoryIndex < history.length - 1;
+
   return (
     <div className="flex h-screen max-h-screen flex-col bg-gradient-animated">
-      <header className="flex items-center justify-between p-4 border-b border-border/50 bg-card/80 backdrop-blur-sm shadow-sm">
+      <header className="flex items-center justify-between p-3 border-b border-border/50 bg-card/80 backdrop-blur-sm shadow-sm">
         <Logo className="text-foreground" textSize="text-2xl" />
         <div className="flex items-center space-x-2">
+          <Button variant="outline" size="icon" onClick={handleUndo} disabled={!canUndo || isGlobalLoading} title="Undo">
+            <Undo className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={handleRedo} disabled={!canRedo || isGlobalLoading} title="Redo">
+            <Redo className="h-4 w-4" />
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href="/">
               <Home className="mr-2 h-4 w-4" /> Home
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
-             <Link href="/"> {/* Redirect to home to re-upload */}
+             <Link href="/">
               <UploadCloud className="mr-2 h-4 w-4" /> New Upload
             </Link>
           </Button>
@@ -97,7 +155,7 @@ export default function EditorPage() {
         <div className="lg:col-span-1 h-full flex flex-col bg-card/60 backdrop-blur-md lg:border-l border-border/50">
           <ChatInterface
             currentImageSrc={imageSrc}
-            onImageUpdate={handleImageUpdate}
+            onImageUpdate={updateImageAndHistory}
             setGlobalLoading={setIsGlobalLoading}
           />
         </div>

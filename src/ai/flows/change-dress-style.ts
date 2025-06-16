@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -34,24 +35,6 @@ export async function changeDressStyle(input: ChangeDressStyleInput): Promise<Ch
   return changeDressStyleFlow(input);
 }
 
-const changeDressStylePrompt = ai.definePrompt({
-  name: 'changeDressStylePrompt',
-  input: {schema: ChangeDressStyleInputSchema},
-  output: {schema: ChangeDressStyleOutputSchema},
-  prompt: [
-    {
-      media: {url: '{{{photoDataUri}}}'},
-    },
-    {
-      text: 'Change the style of the dress to match the following description: {{{stylePrompt}}}',
-    },
-  ],
-  model: 'googleai/gemini-2.0-flash-exp',
-  config: {
-    responseModalities: ['TEXT', 'IMAGE'],
-  },
-});
-
 const changeDressStyleFlow = ai.defineFlow(
   {
     name: 'changeDressStyleFlow',
@@ -59,7 +42,37 @@ const changeDressStyleFlow = ai.defineFlow(
     outputSchema: ChangeDressStyleOutputSchema,
   },
   async input => {
-    const {media} = await changeDressStylePrompt(input);
-    return {editedPhotoDataUri: media!.url!};
+    const {media} = await ai.generate({
+      model: 'googleai/gemini-2.0-flash-exp',
+      prompt: [
+        {media: {url: input.photoDataUri}},
+        {text: `Change the style of the dress in the image to match the following description: ${input.stylePrompt}. Ensure the person and the rest of the image remain as unchanged as possible, focusing only on altering the dress.`},
+      ],
+      config: {
+        responseModalities: ['TEXT', 'IMAGE'],
+         safetySettings: [ // Added safety settings as a precaution, similar to modify-background
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_ONLY_HIGH',
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_NONE',
+          },
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_LOW_AND_ABOVE', // Adjusted if dress styles might trigger this
+          },
+        ],
+      },
+    });
+    if (!media?.url) {
+      throw new Error('AI did not return an edited image for the dress style change.');
+    }
+    return {editedPhotoDataUri: media.url};
   }
 );
