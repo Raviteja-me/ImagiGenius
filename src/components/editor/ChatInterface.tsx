@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Wand2, ImageIcon, Palette, SquarePlus, Sparkles, MessageSquare, Eraser } from 'lucide-react';
+import { Loader2, Wand2, ImageIcon, Palette, SquarePlus, Sparkles, MessageSquare, Eraser, UploadCloud, XCircle } from 'lucide-react';
 import { modifyBackground, type ModifyBackgroundInput } from '@/ai/flows/modify-background';
 import { applyStyleTransfer, type ApplyStyleTransferInput } from '@/ai/flows/apply-style-transfer';
 import { addRemoveObjects, type AddRemoveObjectsInput } from '@/ai/flows/add-remove-objects';
@@ -57,10 +57,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
   const [isLoading, setIsLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const { toast } = useToast();
+  
+  const [referenceImageSrc, setReferenceImageSrc] = useState<string | null>(null);
+  const [isUploadingReference, setIsUploadingReference] = useState(false);
+  const referenceFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (chatHistory.length === 0) {
-       setChatHistory([{ id: 'init', sender: 'system', text: 'Welcome to ImagiGenius! Select a tool and describe your edits.', timestamp: new Date() }]);
+       setChatHistory([{ id: 'init', sender: 'system', text: 'Welcome to ImagiGenius! Select a tool, describe your edits, or upload a reference image for style transfer.', timestamp: new Date() }]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -69,11 +73,37 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
     setChatHistory(prev => [...prev, { ...message, id: crypto.randomUUID(), timestamp: new Date() }]);
   };
 
+  const handleReferenceImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid File Type",
+          description: "Please upload an image file for the reference.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setIsUploadingReference(true);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setReferenceImageSrc(e.target?.result as string);
+        setIsUploadingReference(false);
+        toast({ title: "Reference Image Loaded", description: "Ready for style transfer." });
+      };
+      reader.onerror = () => {
+        toast({ title: "File Read Error", description: "Could not read the reference image file.", variant: "destructive" });
+        setIsUploadingReference(false);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const finalPromptText = promptText.trim();
 
-    if (!finalPromptText && activeTool !== 'style') {
+    if (!finalPromptText && activeTool !== 'style' && !(activeTool === 'style' && referenceImageSrc)) {
         toast({ title: "Missing prompt", description: "Please provide a prompt for the edit.", variant: "destructive" });
         return;
     }
@@ -81,11 +111,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
       toast({ title: "Missing image", description: "Please ensure an image is loaded.", variant: "destructive" });
       return;
     }
-    if (activeTool === 'style' && !finalPromptText && !selectedStyle) {
-      toast({ title: "Missing style information", description: "Please select a style or provide a style description.", variant: "destructive" });
+    if (activeTool === 'style' && !finalPromptText && !selectedStyle && !referenceImageSrc) {
+      toast({ title: "Missing style information", description: "Please select a style, provide a description, or upload a reference image.", variant: "destructive" });
       return;
     }
-
 
     setIsLoading(true);
     setGlobalLoading(true);
@@ -93,9 +122,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
     let userMessage = finalPromptText;
     if (activeTool === 'style') {
       userMessage = `Style: ${selectedStyle}. ${finalPromptText}`;
+      if (referenceImageSrc) {
+        userMessage += ` (Using reference image)`;
+      }
     }
     addMessageToHistory({ sender: 'user', text: userMessage, tool: activeTool });
-
 
     try {
       let resultUri: string | undefined;
@@ -120,6 +151,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
           const styleInput: ApplyStyleTransferInput = { 
             photoDataUri: currentImageSrc, 
             style: selectedStyle + (finalPromptText ? ` ${finalPromptText}` : ''),
+            referencePhotoDataUri: referenceImageSrc || undefined,
           };
           const styleOutput = await applyStyleTransfer(styleInput);
           resultUri = styleOutput.styledPhotoDataUri;
@@ -141,6 +173,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
         throw new Error('AI did not return an image.');
       }
       setPromptText('');
+      // Keep reference image unless explicitly removed by user
     } catch (error: any) {
       console.error("AI Editing Error:", error);
       const errorMessage = error.message || "An unknown error occurred during AI processing.";
@@ -164,13 +197,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
           <Button variant="ghost" size="sm" onClick={() => {
             setChatHistory([{ id: 'init-cleared', sender: 'system', text: 'Chat cleared. Select a tool and describe your edits.', timestamp: new Date() }]);
             setPromptText('');
-          }} title="Clear Chat" disabled={isLoading}>
+            setReferenceImageSrc(null);
+          }} title="Clear Chat & Reference" disabled={isLoading}>
             <Eraser className="mr-1 h-3.5 w-3.5" /> Clear
           </Button>
         </div>
       </CardHeader>
       <CardContent className="flex-grow overflow-hidden p-4">
-        <ScrollArea className="h-full pr-2">
+        <ScrollArea className="h-full pr-3"> {/* Added pr-3 for scrollbar spacing */}
           <div className="space-y-3">
             {chatHistory.map((msg) => (
               <div key={msg.id} className={`flex items-end space-x-2 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
@@ -241,6 +275,44 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
                   ))}
                 </SelectContent>
               </Select>
+              
+              <input
+                type="file"
+                ref={referenceFileInputRef}
+                onChange={handleReferenceImageUpload}
+                className="hidden"
+                accept="image/*"
+                disabled={isLoading || isUploadingReference}
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                className="w-full h-9 text-sm" 
+                onClick={() => referenceFileInputRef.current?.click()}
+                disabled={isLoading || isUploadingReference}
+              >
+                <UploadCloud className="mr-2 h-4 w-4" />
+                {isUploadingReference ? "Uploading..." : referenceImageSrc ? "Change Reference Image" : "Upload Reference Image"}
+              </Button>
+
+              {referenceImageSrc && (
+                <div className="relative group mt-2 p-2 border border-dashed rounded-md">
+                   {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={referenceImageSrc} alt="Reference style" className="max-w-full h-20 object-contain rounded-md mx-auto" data-ai-hint="style reference art" />
+                  <Button 
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-1 right-1 h-6 w-6 opacity-50 group-hover:opacity-100 transition-opacity"
+                    onClick={() => setReferenceImageSrc(null)}
+                    title="Remove reference image"
+                    disabled={isLoading}
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -249,7 +321,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
             <Textarea
               value={promptText}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setPromptText(e.target.value)}
-              placeholder={activeTool === 'style' ? `Describe style (e.g., "${selectedStyle}") or add details...` : `Describe your edit for "${toolDisplayNames[activeTool]}"...`}
+              placeholder={
+                activeTool === 'style' 
+                ? `Describe style (e.g., "${selectedStyle}") or add details...` 
+                : `Describe your edit for "${toolDisplayNames[activeTool]}"...`
+              }
               className="flex-grow resize-none text-sm"
               rows={2}
               disabled={isLoading || !currentImageSrc}
@@ -258,7 +334,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
             <Button
               type="submit"
               size="lg"
-              disabled={isLoading || !currentImageSrc || (!promptText.trim() && activeTool !== 'style') || (activeTool === 'style' && !promptText.trim() && !selectedStyle)}
+              disabled={
+                isLoading || 
+                !currentImageSrc || 
+                (!promptText.trim() && activeTool !== 'style') || 
+                (activeTool === 'style' && !promptText.trim() && !selectedStyle && !referenceImageSrc)
+              }
               className="min-w-[80px] h-auto self-stretch text-sm px-4 py-2"
             >
               {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Send'}
