@@ -7,7 +7,7 @@ import ImageCanvas from '@/components/editor/ImageCanvas';
 import ChatInterface from '@/components/editor/ChatInterface';
 import Logo from '@/components/common/Logo';
 import { Button } from '@/components/ui/button';
-import { Home, UploadCloud, Loader2, Undo, Redo } from 'lucide-react';
+import { Home, UploadCloud, Loader2, Undo, Redo, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -106,6 +106,48 @@ export default function EditorPage() {
     }
   }, [currentHistoryIndex, history]);
 
+  const handleDownload = useCallback(() => {
+    if (imageSrc) {
+      if (imageSrc.startsWith('data:image')) {
+        const link = document.createElement('a');
+        link.href = imageSrc;
+        const fileExtension = imageSrc.split(';')[0].split('/')[1] || 'png';
+        link.download = `imagigenius-edit.${fileExtension}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast({ title: "Image Downloaded", description: `Your masterpiece is saving as imagigenius-edit.${fileExtension}`});
+      } else if (imageSrc.startsWith('http')) {
+        // For external URLs, try to fetch and then download, or open in new tab
+        // This is a simplified approach; robust fetching might need server-side help for CORS
+        fetch(imageSrc)
+          .then(response => response.blob())
+          .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const fileExtension = blob.type.split('/')[1] || 'png';
+            link.download = `imagigenius-edit.${fileExtension}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            toast({ title: "Image Downloaded", description: `Your masterpiece is saving as imagigenius-edit.${fileExtension}`});
+          })
+          .catch(error => {
+            console.error("Error downloading image:", error);
+            toast({ title: "Download Error", description: "Could not download the image. Try opening it in a new tab and saving.", variant: "destructive" });
+            // Fallback for direct links
+            window.open(imageSrc, '_blank');
+          });
+      } else {
+         toast({ title: "Download Error", description: "Cannot download this image type.", variant: "destructive" });
+      }
+    } else {
+      toast({ title: "No Image", description: "There's no image to download.", variant: "destructive" });
+    }
+  }, [imageSrc, toast]);
+
 
   if (isLoadingPersistence) {
     return (
@@ -130,6 +172,9 @@ export default function EditorPage() {
           <Button variant="outline" size="icon" onClick={handleRedo} disabled={!canRedo || isGlobalLoading} title="Redo">
             <Redo className="h-4 w-4" />
           </Button>
+          <Button variant="outline" size="sm" onClick={handleDownload} disabled={isGlobalLoading || !imageSrc || imageSrc === DEFAULT_PLACEHOLDER_IMAGE} title="Download Image">
+            <Download className="mr-2 h-4 w-4" /> Download
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href="/">
               <Home className="mr-2 h-4 w-4" /> Home
@@ -144,7 +189,7 @@ export default function EditorPage() {
       </header>
 
       <main className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-0 overflow-hidden">
-        <div className="lg:col-span-2 h-full flex items-center justify-center p-4 bg-background/30">
+        <div className="lg:col-span-2 h-full flex items-center justify-center p-4 bg-background/30 relative">
            {isGlobalLoading && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
