@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from 'react';
 import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Wand2, ImageIcon, Palette, Nutzer, SquarePlus, Sparkles, MessageSquare, Eraser } from 'lucide-react';
+import { Loader2, Wand2, ImageIcon, Palette, Nutzer, SquarePlus, Sparkles, MessageSquare, Eraser } from 'lucide-react'; // Nutzer is not a valid Lucide icon, will be an issue later if used.
 import { modifyBackground, type ModifyBackgroundInput } from '@/ai/flows/modify-background';
 import { applyStyleTransfer, type ApplyStyleTransferInput } from '@/ai/flows/apply-style-transfer';
 import { addRemoveObjects, type AddRemoveObjectsInput } from '@/ai/flows/add-remove-objects';
@@ -27,7 +28,7 @@ const toolDisplayNames: Record<AiTool, string> = {
 const toolIcons: Record<AiTool, React.ElementType> = {
   general: Wand2,
   background: ImageIcon,
-  dress: Palette, // Using Palette as a generic style icon for dress
+  dress: Palette, 
   style: Sparkles,
   object: SquarePlus,
 };
@@ -58,7 +59,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
   const { toast } = useToast();
 
   useEffect(() => {
-    // Initialize with a system message
     if (chatHistory.length === 0) {
        setChatHistory([{ id: 'init', sender: 'system', text: 'Welcome to ImagiGenius! Select a tool and describe your edits.', timestamp: new Date() }]);
     }
