@@ -28,7 +28,7 @@ const toolDisplayNames: Record<AiTool, string> = {
 const toolIcons: Record<AiTool, React.ElementType> = {
   general: Wand2,
   background: ImageIcon,
-  dress: Palette, 
+  dress: Palette,
   style: Sparkles,
   object: SquarePlus,
 };
@@ -132,12 +132,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
       setGlobalLoading(false);
     }
   };
-  
+
   const CurrentToolIcon = toolIcons[activeTool];
 
   return (
     <Card className="w-full h-full flex flex-col shadow-2xl border-none bg-card/70 backdrop-blur-md">
-      <CardHeader className="pb-2 pt-4 px-4">
+      <CardHeader className="p-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl font-headline flex items-center">
             <MessageSquare className="mr-2 text-primary" /> AI Chat Editor
@@ -147,9 +147,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow overflow-hidden p-0 px-2">
-        <ScrollArea className="h-full pr-2 py-2">
-          <div className="space-y-4 p-2">
+      <CardContent className="flex-grow overflow-hidden p-4">
+        <ScrollArea className="h-full">
+          <div className="space-y-4">
             {chatHistory.map((msg) => (
               <div key={msg.id} className={`flex items-end space-x-2 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
                 {msg.sender !== 'user' && msg.sender !== 'system' && (
@@ -164,7 +164,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
                   </Avatar>
                 )}
                 <div className={`max-w-[75%] rounded-lg p-3 text-sm shadow-md ${
-                  msg.sender === 'user' ? 'bg-primary text-primary-foreground ml-auto' : 
+                  msg.sender === 'user' ? 'bg-primary text-primary-foreground ml-auto' :
                   msg.sender === 'system' ? 'bg-muted text-muted-foreground w-full text-center' : 'bg-secondary text-secondary-foreground'
                 }`}>
                   {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}

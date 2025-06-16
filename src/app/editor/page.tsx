@@ -26,7 +26,7 @@ export default function EditorPage() {
         setImageSrc(storedImage);
       } else {
         // If no image in local storage, set a default placeholder or guide user
-        setImageSrc(DEFAULT_PLACEHOLDER_IMAGE); 
+        setImageSrc(DEFAULT_PLACEHOLDER_IMAGE);
         toast({
           title: "No Uploaded Image Found",
           description: "Starting with a placeholder. You can describe your desired image to the AI or upload a new one.",
@@ -69,7 +69,7 @@ export default function EditorPage() {
 
   return (
     <div className="flex h-screen max-h-screen flex-col bg-gradient-animated">
-      <header className="flex items-center justify-between p-3 border-b border-border/50 bg-card/80 backdrop-blur-sm shadow-sm">
+      <header className="flex items-center justify-between p-4 border-b border-border/50 bg-card/80 backdrop-blur-sm shadow-sm">
         <Logo className="text-foreground" textSize="text-2xl" />
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm" asChild>
@@ -95,8 +95,8 @@ export default function EditorPage() {
           <ImageCanvas imageSrc={imageSrc} />
         </div>
         <div className="lg:col-span-1 h-full flex flex-col bg-card/60 backdrop-blur-md lg:border-l border-border/50">
-          <ChatInterface 
-            currentImageSrc={imageSrc} 
+          <ChatInterface
+            currentImageSrc={imageSrc}
             onImageUpdate={handleImageUpdate}
             setGlobalLoading={setIsGlobalLoading}
           />
