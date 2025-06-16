@@ -64,7 +64,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
 
   useEffect(() => {
     if (chatHistory.length === 0) {
-       setChatHistory([{ id: 'init', sender: 'system', text: 'Welcome to ImagiGenius! Select a tool, describe your edits, or upload a reference image for style transfer.', timestamp: new Date() }]);
+       setChatHistory([{ id: 'init', sender: 'system', text: 'Welcome to ImagiGenius! Select a tool and describe your edits. The "Add/Remove Object" tool can use an optional reference image.', timestamp: new Date() }]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -89,7 +89,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
       reader.onload = (e) => {
         setReferenceImageSrc(e.target?.result as string);
         setIsUploadingReference(false);
-        toast({ title: "Reference Image Loaded", description: "Ready for style transfer." });
+        toast({ title: "Reference Image Loaded", description: "Ready for 'Add/Remove Object' guidance." });
       };
       reader.onerror = () => {
         toast({ title: "File Read Error", description: "Could not read the reference image file.", variant: "destructive" });
@@ -103,7 +103,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
     e.preventDefault();
     const finalPromptText = promptText.trim();
 
-    if (!finalPromptText && activeTool !== 'style' && !(activeTool === 'style' && referenceImageSrc)) {
+    if (!finalPromptText && activeTool !== 'style') { // Style tool can work with just a selected style
         toast({ title: "Missing prompt", description: "Please provide a prompt for the edit.", variant: "destructive" });
         return;
     }
@@ -111,8 +111,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
       toast({ title: "Missing image", description: "Please ensure an image is loaded.", variant: "destructive" });
       return;
     }
-    if (activeTool === 'style' && !finalPromptText && !selectedStyle && !referenceImageSrc) {
-      toast({ title: "Missing style information", description: "Please select a style, provide a description, or upload a reference image.", variant: "destructive" });
+    if (activeTool === 'style' && !finalPromptText && !selectedStyle) { // For style tool, either text or selected style must be present
+      toast({ title: "Missing style information", description: "Please select a style or provide a style description.", variant: "destructive" });
       return;
     }
 
@@ -122,9 +122,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
     let userMessage = finalPromptText;
     if (activeTool === 'style') {
       userMessage = `Style: ${selectedStyle}. ${finalPromptText}`;
-      if (referenceImageSrc) {
-        userMessage += ` (Using reference image)`;
-      }
+    } else if (activeTool === 'object' && referenceImageSrc) {
+      userMessage = `${finalPromptText} (Using reference image)`;
     }
     addMessageToHistory({ sender: 'user', text: userMessage, tool: activeTool });
 
@@ -151,13 +150,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
           const styleInput: ApplyStyleTransferInput = { 
             photoDataUri: currentImageSrc, 
             style: selectedStyle + (finalPromptText ? ` ${finalPromptText}` : ''),
-            referencePhotoDataUri: referenceImageSrc || undefined,
           };
           const styleOutput = await applyStyleTransfer(styleInput);
           resultUri = styleOutput.styledPhotoDataUri;
           break;
         case 'object':
-          const objectInput: AddRemoveObjectsInput = { photoDataUri: currentImageSrc, command: finalPromptText };
+          const objectInput: AddRemoveObjectsInput = { 
+            photoDataUri: currentImageSrc, 
+            command: finalPromptText,
+            referencePhotoDataUri: referenceImageSrc || undefined,
+          };
           const objectOutput = await addRemoveObjects(objectInput);
           resultUri = objectOutput.modifiedPhotoDataUri;
           break;
@@ -173,7 +175,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
         throw new Error('AI did not return an image.');
       }
       setPromptText('');
-      // Keep reference image unless explicitly removed by user
+      // For object tool, we clear reference image after use unless user wants to keep it for multiple edits.
+      // For now, let's clear it to avoid confusion for subsequent, unrelated object edits.
+      // User can re-upload if needed for the next specific object edit.
+      if(activeTool === 'object') {
+        setReferenceImageSrc(null);
+      }
     } catch (error: any) {
       console.error("AI Editing Error:", error);
       const errorMessage = error.message || "An unknown error occurred during AI processing.";
@@ -189,7 +196,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
 
   return (
     <Card className="w-full h-full flex flex-col shadow-2xl border-none bg-card/70 backdrop-blur-md">
-      <CardHeader className="p-4 border-b border-border/30">
+      <CardHeader className="p-3 border-b border-border/30">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-headline flex items-center">
             <MessageSquare className="mr-2 text-primary h-5 w-5" /> AI Chat Editor
@@ -197,14 +204,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
           <Button variant="ghost" size="sm" onClick={() => {
             setChatHistory([{ id: 'init-cleared', sender: 'system', text: 'Chat cleared. Select a tool and describe your edits.', timestamp: new Date() }]);
             setPromptText('');
-            setReferenceImageSrc(null);
+            setReferenceImageSrc(null); // Also clear reference image on full chat clear
           }} title="Clear Chat & Reference" disabled={isLoading}>
             <Eraser className="mr-1 h-3.5 w-3.5" /> Clear
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow overflow-hidden p-4">
-        <ScrollArea className="h-full pr-3"> {/* Added pr-3 for scrollbar spacing */}
+      <CardContent className="flex-grow overflow-hidden p-3">
+        <ScrollArea className="h-full pr-2"> 
           <div className="space-y-3">
             {chatHistory.map((msg) => (
               <div key={msg.id} className={`flex items-end space-x-2 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
@@ -252,7 +259,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
                 type="button"
                 variant={activeTool === tool ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setActiveTool(tool)}
+                onClick={() => {
+                  setActiveTool(tool);
+                  // Clear reference image if switching away from object tool or to a tool that doesn't use it
+                  if (tool !== 'object') setReferenceImageSrc(null);
+                }}
                 className="flex-1 text-xs px-2 justify-start sm:justify-center sm:text-sm h-9"
                 aria-pressed={activeTool === tool}
                 aria-label={`Select ${toolDisplayNames[tool]} tool`}
@@ -264,18 +275,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
           </div>
 
           {activeTool === 'style' && (
+            <Select value={selectedStyle} onValueChange={setSelectedStyle} disabled={isLoading}>
+              <SelectTrigger className="w-full h-9 text-sm" aria-label="Select style for Style Transfer tool">
+                <SelectValue placeholder="Select a pre-defined style" />
+              </SelectTrigger>
+              <SelectContent>
+                {styleOptions.map(style => (
+                  <SelectItem key={style} value={style} className="text-sm">{style}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          
+          {activeTool === 'object' && (
             <div className="space-y-2">
-              <Select value={selectedStyle} onValueChange={setSelectedStyle} disabled={isLoading}>
-                <SelectTrigger className="w-full h-9 text-sm" aria-label="Select style for Style Transfer tool">
-                  <SelectValue placeholder="Select a pre-defined style" />
-                </SelectTrigger>
-                <SelectContent>
-                  {styleOptions.map(style => (
-                    <SelectItem key={style} value={style} className="text-sm">{style}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
               <input
                 type="file"
                 ref={referenceFileInputRef}
@@ -293,13 +306,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
                 disabled={isLoading || isUploadingReference}
               >
                 <UploadCloud className="mr-2 h-4 w-4" />
-                {isUploadingReference ? "Uploading..." : referenceImageSrc ? "Change Reference Image" : "Upload Reference Image"}
+                {isUploadingReference ? "Uploading..." : referenceImageSrc ? "Change Reference Image" : "Upload Reference Image (Optional)"}
               </Button>
 
               {referenceImageSrc && (
                 <div className="relative group mt-2 p-2 border border-dashed rounded-md">
                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={referenceImageSrc} alt="Reference style" className="max-w-full h-20 object-contain rounded-md mx-auto" data-ai-hint="style reference art" />
+                  <img src={referenceImageSrc} alt="Reference for object task" className="max-w-full h-20 object-contain rounded-md mx-auto" data-ai-hint="object reference" />
                   <Button 
                     type="button"
                     variant="destructive"
@@ -315,6 +328,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
               )}
             </div>
           )}
+
 
           <div className="flex items-end space-x-2">
             <CurrentToolIcon className="h-5 w-5 text-primary flex-shrink-0 mb-2" />
@@ -337,8 +351,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
               disabled={
                 isLoading || 
                 !currentImageSrc || 
-                (!promptText.trim() && activeTool !== 'style') || 
-                (activeTool === 'style' && !promptText.trim() && !selectedStyle && !referenceImageSrc)
+                (!promptText.trim() && (activeTool !== 'style' && activeTool !== 'object')) || // general, background, dress need prompt
+                (activeTool === 'style' && !promptText.trim() && !selectedStyle) || // style needs either prompt or selected style
+                (activeTool === 'object' && !promptText.trim()) // object needs prompt (reference is optional)
               }
               className="min-w-[80px] h-auto self-stretch text-sm px-4 py-2"
             >

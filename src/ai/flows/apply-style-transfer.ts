@@ -2,7 +2,7 @@
 'use server';
 
 /**
- * @fileOverview Applies a specific style to an image using chat commands, optionally guided by a reference image.
+ * @fileOverview Applies a specific style to an image using chat commands.
  *
  * - applyStyleTransfer - A function that applies a style transfer to an image.
  * - ApplyStyleTransferInput - The input type for the applyStyleTransfer function.
@@ -19,9 +19,6 @@ const ApplyStyleTransferInputSchema = z.object({
       "A photo to be stylized, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   style: z.string().describe('The desired style to apply to the image (e.g., Ghibli, contour, sketch).'),
-  referencePhotoDataUri: z.optional(z.string().describe(
-    "An optional reference photo for style guidance, as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-  )),
 });
 export type ApplyStyleTransferInput = z.infer<typeof ApplyStyleTransferInputSchema>;
 
@@ -46,18 +43,11 @@ const applyStyleTransferFlow = ai.defineFlow(
   },
   async (input) => {
     const promptParts: ({text: string} | {media: {url: string}})[] = [];
-
-    let styleInstruction = `Apply the following style to the image: "${input.style}"`;
-    if (input.referencePhotoDataUri) {
-      styleInstruction += `. Use the provided reference image for style guidance. The main image to be modified is the second image provided.`;
-      promptParts.push({ text: styleInstruction });
-      promptParts.push({ media: { url: input.referencePhotoDataUri } }); // Reference image first
-      promptParts.push({ media: { url: input.photoDataUri } }); // Then target image
-    } else {
-      promptParts.push({ text: styleInstruction });
-      promptParts.push({ media: { url: input.photoDataUri } });
-    }
     
+    const styleInstruction = `Apply the following style to the image: "${input.style}"`;
+    promptParts.push({ text: styleInstruction });
+    promptParts.push({ media: { url: input.photoDataUri } });
+        
     const { media } = await ai.generate({
       model: 'googleai/gemini-2.0-flash-exp',
       prompt: promptParts,
@@ -72,4 +62,3 @@ const applyStyleTransferFlow = ai.defineFlow(
     return { styledPhotoDataUri: media.url };
   }
 );
-
