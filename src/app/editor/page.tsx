@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -7,9 +6,14 @@ import ImageCanvas from '@/components/editor/ImageCanvas';
 import ChatInterface from '@/components/editor/ChatInterface';
 import Logo from '@/components/common/Logo';
 import { Button } from '@/components/ui/button';
-import { Home, UploadCloud, Loader2, Undo, Redo, Download } from 'lucide-react';
+import { Home, UploadCloud, Loader2, Undo, Redo, Download, User, Sparkles, MessageSquare, X } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import AuthLoading from '@/components/auth/AuthLoading';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const DEFAULT_PLACEHOLDER_IMAGE = "https://placehold.co/800x600.png?text=Start+Editing!";
 const MAX_HISTORY_SIZE = 10;
@@ -18,11 +22,21 @@ export default function EditorPage() {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [isLoadingPersistence, setIsLoadingPersistence] = useState(true);
   const [isGlobalLoading, setIsGlobalLoading] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { user, userData, loading: authLoading } = useAuth();
+  const isMobile = useIsMobile();
 
   const [history, setHistory] = useState<string[]>([]);
   const [currentHistoryIndex, setCurrentHistoryIndex] = useState<number>(-1);
+
+  // Auto-hide chat on mobile when not in use
+  useEffect(() => {
+    if (!isMobile) {
+      setShowChat(true);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     try {
@@ -149,13 +163,8 @@ export default function EditorPage() {
   }, [imageSrc, toast]);
 
 
-  if (isLoadingPersistence) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground">
-        <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
-        <p className="text-xl font-semibold">Loading your masterpiece...</p>
-      </div>
-    );
+  if (isLoadingPersistence || authLoading) {
+    return <AuthLoading />;
   }
 
   const canUndo = currentHistoryIndex > 0;
@@ -163,47 +172,107 @@ export default function EditorPage() {
 
   return (
     <div className="flex h-screen max-h-screen flex-col bg-gradient-animated">
+      {/* Mobile Header */}
       <header className="flex items-center justify-between p-3 border-b border-border/50 bg-card/80 backdrop-blur-sm shadow-sm">
-        <Logo className="text-foreground" textSize="text-2xl" />
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="icon" onClick={handleUndo} disabled={!canUndo || isGlobalLoading} title="Undo">
-            <Undo className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={handleRedo} disabled={!canRedo || isGlobalLoading} title="Redo">
-            <Redo className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleDownload} disabled={isGlobalLoading || !imageSrc || imageSrc === DEFAULT_PLACEHOLDER_IMAGE} title="Download Image">
-            <Download className="mr-2 h-4 w-4" /> Download
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/">
-              <Home className="mr-2 h-4 w-4" /> Home
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-             <Link href="/">
-              <UploadCloud className="mr-2 h-4 w-4" /> New Upload
-            </Link>
-          </Button>
-        </div>
+        <Logo className="text-foreground" textSize="text-xl sm:text-2xl" />
+        
+        {/* Mobile: Show chat toggle and essential buttons */}
+        {isMobile ? (
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="icon" onClick={handleUndo} disabled={!canUndo || isGlobalLoading} title="Undo">
+              <Undo className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={handleRedo} disabled={!canRedo || isGlobalLoading} title="Redo">
+              <Redo className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant={showChat ? "default" : "outline"} 
+              size="icon" 
+              onClick={() => setShowChat(!showChat)}
+              title="Toggle Chat"
+            >
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={handleDownload} disabled={isGlobalLoading || !imageSrc || imageSrc === DEFAULT_PLACEHOLDER_IMAGE} title="Download Image">
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" asChild>
+              <Link href="/">
+                <Home className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        ) : (
+          /* Desktop: Show all buttons */
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="icon" onClick={handleUndo} disabled={!canUndo || isGlobalLoading} title="Undo">
+              <Undo className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={handleRedo} disabled={!canRedo || isGlobalLoading} title="Redo">
+              <Redo className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDownload} disabled={isGlobalLoading || !imageSrc || imageSrc === DEFAULT_PLACEHOLDER_IMAGE} title="Download Image">
+              <Download className="mr-2 h-4 w-4" /> Download
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/">
+                <Home className="mr-2 h-4 w-4" /> Home
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+               <Link href="/">
+                <UploadCloud className="mr-2 h-4 w-4" /> New Upload
+              </Link>
+            </Button>
+          </div>
+        )}
       </header>
 
-      <main className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-0 overflow-hidden">
-        <div className="lg:col-span-2 h-full flex items-center justify-center p-4 bg-background/30 relative">
-           {isGlobalLoading && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <main className="flex-grow flex overflow-hidden">
+        {/* Mobile Layout */}
+        {isMobile ? (
+          <div className="w-full flex flex-col">
+            {/* Image Canvas - Takes full width when chat is hidden */}
+            <div className={`flex-1 flex items-center justify-center p-2 bg-background/30 relative ${showChat ? 'h-1/2' : 'h-full'}`}>
+              {isGlobalLoading && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                </div>
+              )}
+              <ImageCanvas imageSrc={imageSrc} />
             </div>
-          )}
-          <ImageCanvas imageSrc={imageSrc} />
-        </div>
-        <div className="lg:col-span-1 h-full flex flex-col bg-card/60 backdrop-blur-md lg:border-l border-border/50">
-          <ChatInterface
-            currentImageSrc={imageSrc}
-            onImageUpdate={updateImageAndHistory}
-            setGlobalLoading={setIsGlobalLoading}
-          />
-        </div>
+            
+            {/* Chat Interface - Slides up from bottom on mobile */}
+            {showChat && (
+              <div className="h-1/2 bg-card/60 backdrop-blur-md border-t border-border/50">
+                <ChatInterface
+                  currentImageSrc={imageSrc}
+                  onImageUpdate={updateImageAndHistory}
+                  setGlobalLoading={setIsGlobalLoading}
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Desktop Layout - Side by side */
+          <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-0">
+            <div className="lg:col-span-2 h-full flex items-center justify-center p-4 bg-background/30 relative">
+               {isGlobalLoading && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                </div>
+              )}
+              <ImageCanvas imageSrc={imageSrc} />
+            </div>
+            <div className="lg:col-span-1 h-full flex flex-col bg-card/60 backdrop-blur-md lg:border-l border-border/50">
+              <ChatInterface
+                currentImageSrc={imageSrc}
+                onImageUpdate={updateImageAndHistory}
+                setGlobalLoading={setIsGlobalLoading}
+              />
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
