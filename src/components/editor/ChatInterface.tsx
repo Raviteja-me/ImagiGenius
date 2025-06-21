@@ -314,15 +314,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
         </CardHeader>
         
         <CardContent className="flex-grow overflow-hidden p-2 sm:p-4 relative">
-          {/* Fixed height scrollable chat area with custom scrollbar */}
+          {/* Fixed height scrollable chat area - removed custom scrollbar for mobile compatibility */}
           <div 
-            className="h-64 sm:h-96 w-full overflow-y-auto border border-border/20 rounded-md bg-background/50 scrollbar-thin scrollbar-thumb-primary scrollbar-track-muted"
+            className="h-64 sm:h-96 w-full overflow-y-auto border border-border/20 rounded-md bg-background/50"
             ref={scrollAreaRef}
             onScroll={handleScroll}
-            style={{
-              scrollbarWidth: 'thin',
-              scrollbarColor: 'hsl(var(--primary)) hsl(var(--muted))'
-            }}
           >
             <div className="p-2 sm:p-4 space-y-3">
               {chatHistory.map((msg) => (
@@ -383,8 +379,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
         
         <CardFooter className="p-2 sm:p-3 border-t border-border/30 flex-shrink-0">
           <form onSubmit={handleSubmit} className="w-full space-y-2.5">
-            {/* Tool buttons - Responsive grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
+            {/* Tool buttons - Hidden on mobile, show on desktop */}
+            <div className="hidden sm:grid sm:grid-cols-3 md:grid-cols-5 gap-1.5">
               {(Object.keys(toolIcons) as AiTool[]).map(tool => (
                 <Button
                   key={tool}
@@ -406,6 +402,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
                   <span className="truncate sm:hidden">{toolDisplayNames[tool].split(' ')[0]}</span>
                 </Button>
               ))}
+            </div>
+
+            {/* Mobile: Show current tool name */}
+            <div className="sm:hidden text-center py-2">
+              <span className="text-sm font-medium text-muted-foreground">
+                Current Tool: {toolDisplayNames[activeTool]}
+              </span>
             </div>
 
             {activeTool === 'style' && (
