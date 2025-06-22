@@ -22,10 +22,8 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     formats: ['image/webp', 'image/avif'],
   },
-  // Increase body parser limit for larger file uploads
-  experimental: {
-    serverComponentsExternalPackages: [],
-  },
+  // Replaced deprecated `experimental.serverComponentsExternalPackages`
+  serverExternalPackages: [],
   // Add headers for better mobile experience
   async headers() {
     return [
