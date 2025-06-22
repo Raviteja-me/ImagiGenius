@@ -281,12 +281,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
 
   return (
     <>
-      <Card className="w-full h-full flex flex-col shadow-2xl border-none bg-card/70 backdrop-blur-md">
+    <Card className="w-full h-full flex flex-col shadow-2xl border-none bg-card/70 backdrop-blur-md">
         <CardHeader className="p-4 border-b border-border/30 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-headline flex items-center">
-              <MessageSquare className="mr-2 text-primary h-5 w-5" /> AI Chat Editor
-            </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-headline flex items-center">
+            <MessageSquare className="mr-2 text-primary h-5 w-5" /> AI Chat Editor
+          </CardTitle>
             <div className="flex items-center gap-2">
               <Button 
                 variant="ghost" 
@@ -302,16 +302,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
               >
                 Test Scroll
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => {
-                setChatHistory([{ id: 'init-cleared', sender: 'system', text: 'Chat cleared. Select a tool and describe your edits. The "Add/Remove Object" tool can use an optional reference image.', timestamp: new Date() }]);
-                setPromptText('');
-                setReferenceImageSrc(null); 
-              }} title="Clear Chat & Reference" disabled={isLoading}>
-                <Eraser className="mr-1 h-3.5 w-3.5" /> Clear
-              </Button>
+          <Button variant="ghost" size="sm" onClick={() => {
+            setChatHistory([{ id: 'init-cleared', sender: 'system', text: 'Chat cleared. Select a tool and describe your edits. The "Add/Remove Object" tool can use an optional reference image.', timestamp: new Date() }]);
+            setPromptText('');
+            setReferenceImageSrc(null); 
+          }} title="Clear Chat & Reference" disabled={isLoading}>
+            <Eraser className="mr-1 h-3.5 w-3.5" /> Clear
+          </Button>
             </div>
-          </div>
-        </CardHeader>
+        </div>
+      </CardHeader>
         
         <CardContent className="flex-grow overflow-hidden p-2 sm:p-4 relative">
           {/* Fixed height scrollable chat area - removed custom scrollbar for mobile compatibility */}
@@ -321,40 +321,40 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
             onScroll={handleScroll}
           >
             <div className="p-2 sm:p-4 space-y-3">
-              {chatHistory.map((msg) => (
-                <div key={msg.id} className={`flex items-end space-x-2 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
-                  {msg.sender === 'ai' && (
+            {chatHistory.map((msg) => (
+              <div key={msg.id} className={`flex items-end space-x-2 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
+                {msg.sender === 'ai' && (
                     <Avatar className="h-6 w-6 sm:h-7 sm:w-7 flex-shrink-0">
-                      <AvatarImage src="https://placehold.co/40x40.png?text=AI" alt="AI Avatar" data-ai-hint="robot face" />
-                      <AvatarFallback>AI</AvatarFallback>
-                    </Avatar>
-                  )}
-                   {msg.sender === 'system' && (
+                    <AvatarImage src="https://placehold.co/40x40.png?text=AI" alt="AI Avatar" data-ai-hint="robot face" />
+                    <AvatarFallback>AI</AvatarFallback>
+                  </Avatar>
+                )}
+                 {msg.sender === 'system' && (
                     <Avatar className="h-6 w-6 sm:h-7 sm:w-7 flex-shrink-0">
-                       <Sparkles className="h-full w-full text-primary p-1 bg-primary/20 rounded-full"/>
-                    </Avatar>
-                  )}
+                     <Sparkles className="h-full w-full text-primary p-1 bg-primary/20 rounded-full"/>
+                  </Avatar>
+                )}
                   <div className={`max-w-[85%] sm:max-w-[80%] rounded-lg p-2 sm:p-2.5 text-xs sm:text-sm shadow-md break-words ${
-                    msg.sender === 'user' ? 'bg-primary text-primary-foreground ml-auto' :
-                    msg.sender === 'system' ? 'bg-muted/70 text-muted-foreground w-full text-center text-xs py-1.5' : 'bg-secondary text-secondary-foreground'
-                  }`}>
+                  msg.sender === 'user' ? 'bg-primary text-primary-foreground ml-auto' :
+                  msg.sender === 'system' ? 'bg-muted/70 text-muted-foreground w-full text-center text-xs py-1.5' : 'bg-secondary text-secondary-foreground'
+                }`}>
                     {msg.text && <p className="whitespace-pre-wrap break-words">{msg.text}</p>}
-                    {msg.image && (
-                      <div className="mt-1.5">
-                         {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {msg.image && (
+                    <div className="mt-1.5">
+                       {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={msg.image} alt="AI Generated Image" className="rounded-md max-w-full h-auto max-h-32 sm:max-h-40 object-contain" data-ai-hint="edited photography" />
-                      </div>
-                    )}
-                    <p className={`text-xs opacity-70 mt-1 ${msg.sender === 'user' ? 'text-right' : msg.sender === 'system' ? 'hidden' : 'text-right'}`}>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                  </div>
-                  {msg.sender === 'user' && (
+                    </div>
+                  )}
+                  <p className={`text-xs opacity-70 mt-1 ${msg.sender === 'user' ? 'text-right' : msg.sender === 'system' ? 'hidden' : 'text-right'}`}>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                </div>
+                {msg.sender === 'user' && (
                     <Avatar className="h-6 w-6 sm:h-7 sm:w-7 flex-shrink-0">
                       <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} data-ai-hint="person silhouette"/>
                       <AvatarFallback>{user?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}</AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
-              ))}
+                  </Avatar>
+                )}
+              </div>
+            ))}
               <div ref={messagesEndRef} />
             </div>
           </div>
@@ -375,34 +375,34 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
               <ChevronDown className="h-4 w-4" />
             </Button>
           )}
-        </CardContent>
+      </CardContent>
         
         <CardFooter className="p-2 sm:p-3 border-t border-border/30 flex-shrink-0">
-          <form onSubmit={handleSubmit} className="w-full space-y-2.5">
+        <form onSubmit={handleSubmit} className="w-full space-y-2.5">
             {/* Tool buttons - Hidden on mobile, show on desktop */}
             <div className="hidden sm:grid sm:grid-cols-3 md:grid-cols-5 gap-1.5">
-              {(Object.keys(toolIcons) as AiTool[]).map(tool => (
-                <Button
-                  key={tool}
-                  type="button"
-                  variant={activeTool === tool ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    setActiveTool(tool);
-                     if (tool !== 'object') {
-                       setReferenceImageSrc(null); // Clear reference if not object tool
-                     }
-                  }}
+            {(Object.keys(toolIcons) as AiTool[]).map(tool => (
+              <Button
+                key={tool}
+                type="button"
+                variant={activeTool === tool ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  setActiveTool(tool);
+                   if (tool !== 'object') {
+                     setReferenceImageSrc(null); // Clear reference if not object tool
+                   }
+                }}
                   className="flex-1 text-xs px-1 sm:px-2 justify-center h-8 sm:h-9"
-                  aria-pressed={activeTool === tool}
-                  aria-label={`Select ${toolDisplayNames[tool]} tool`}
-                >
+                aria-pressed={activeTool === tool}
+                aria-label={`Select ${toolDisplayNames[tool]} tool`}
+              >
                   {React.createElement(toolIcons[tool], { className: "mr-1 h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" })}
                   <span className="truncate hidden sm:inline">{toolDisplayNames[tool]}</span>
                   <span className="truncate sm:hidden">{toolDisplayNames[tool].split(' ')[0]}</span>
-                </Button>
-              ))}
-            </div>
+              </Button>
+            ))}
+          </div>
 
             {/* Mobile: Show current tool name */}
             <div className="sm:hidden text-center py-2">
@@ -411,98 +411,98 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
               </span>
             </div>
 
-            {activeTool === 'style' && (
-              <Select value={selectedStyle} onValueChange={setSelectedStyle} disabled={isLoading}>
-                <SelectTrigger className="w-full h-9 text-sm" aria-label="Select style for Style Transfer tool">
-                  <SelectValue placeholder="Select a pre-defined style" />
-                </SelectTrigger>
-                <SelectContent>
-                  {styleOptions.map(style => (
-                    <SelectItem key={style} value={style} className="text-sm">{style}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            
-            {activeTool === 'object' && (
-              <div className="space-y-2">
-                <input
-                  type="file"
-                  ref={referenceFileInputRef}
-                  onChange={handleReferenceImageUpload}
-                  className="hidden"
-                  accept="image/*"
-                  disabled={isLoading || isUploadingReference}
-                />
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full h-9 text-sm" 
-                  onClick={() => referenceFileInputRef.current?.click()}
-                  disabled={isLoading || isUploadingReference}
-                >
-                  <UploadCloud className="mr-2 h-4 w-4" />
-                  {isUploadingReference ? "Uploading..." : referenceImageSrc ? "Change Reference Image" : "Upload Reference Image (Optional)"}
-                </Button>
-
-                {referenceImageSrc && (
-                  <div className="relative group mt-2 p-2 border border-dashed rounded-md">
-                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={referenceImageSrc} alt="Reference for object task" className="max-w-full h-20 object-contain rounded-md mx-auto" data-ai-hint="object reference" />
-                    <Button 
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-1 right-1 h-6 w-6 opacity-50 group-hover:opacity-100 transition-opacity"
-                      onClick={() => setReferenceImageSrc(null)}
-                      title="Remove reference image"
-                      disabled={isLoading}
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-
-
-            <div className="flex items-end space-x-2">
-              <CurrentToolIcon className="h-5 w-5 text-primary flex-shrink-0 mb-2" />
-              <Textarea
-                value={promptText}
-                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setPromptText(e.target.value)}
-                placeholder={
-                  activeTool === 'style' 
-                  ? `Describe style (e.g., "${selectedStyle}") or add details...` 
-                  : activeTool === 'object'
-                  ? 'Describe object to add/remove (e.g., "add a cat on the sofa" or "remove the person on the left")'
-                  : `Describe your edit for "${toolDisplayNames[activeTool]}"...`
-                }
-                className="flex-grow resize-none text-sm"
-                rows={2}
-                disabled={isLoading || !currentImageSrc}
-                aria-label="Prompt for image editing"
+          {activeTool === 'style' && (
+            <Select value={selectedStyle} onValueChange={setSelectedStyle} disabled={isLoading}>
+              <SelectTrigger className="w-full h-9 text-sm" aria-label="Select style for Style Transfer tool">
+                <SelectValue placeholder="Select a pre-defined style" />
+              </SelectTrigger>
+              <SelectContent>
+                {styleOptions.map(style => (
+                  <SelectItem key={style} value={style} className="text-sm">{style}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          
+          {activeTool === 'object' && (
+            <div className="space-y-2">
+              <input
+                type="file"
+                ref={referenceFileInputRef}
+                onChange={handleReferenceImageUpload}
+                className="hidden"
+                accept="image/*"
+                disabled={isLoading || isUploadingReference}
               />
-              <Button
-                type="submit"
-                size="lg"
-                disabled={
-                  isLoading || 
-                  !currentImageSrc ||
-                  // Disable if prompt is empty for tools that strictly require it
-                  ( (activeTool === 'general' || activeTool === 'background' || activeTool === 'dress' || activeTool === 'object') && !promptText.trim() ) ||
-                  // Disable for style tool if both selectedStyle AND promptText are empty
-                  ( activeTool === 'style' && !selectedStyle && !promptText.trim() )
-                }
-                className="min-w-[80px] h-auto self-stretch text-sm px-4 py-2"
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                className="w-full h-9 text-sm" 
+                onClick={() => referenceFileInputRef.current?.click()}
+                disabled={isLoading || isUploadingReference}
               >
-                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Send'}
+                <UploadCloud className="mr-2 h-4 w-4" />
+                {isUploadingReference ? "Uploading..." : referenceImageSrc ? "Change Reference Image" : "Upload Reference Image (Optional)"}
               </Button>
+
+              {referenceImageSrc && (
+                <div className="relative group mt-2 p-2 border border-dashed rounded-md">
+                   {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={referenceImageSrc} alt="Reference for object task" className="max-w-full h-20 object-contain rounded-md mx-auto" data-ai-hint="object reference" />
+                  <Button 
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-1 right-1 h-6 w-6 opacity-50 group-hover:opacity-100 transition-opacity"
+                    onClick={() => setReferenceImageSrc(null)}
+                    title="Remove reference image"
+                    disabled={isLoading}
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
-          </form>
-        </CardFooter>
-      </Card>
+          )}
+
+
+          <div className="flex items-end space-x-2">
+            <CurrentToolIcon className="h-5 w-5 text-primary flex-shrink-0 mb-2" />
+            <Textarea
+              value={promptText}
+              onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setPromptText(e.target.value)}
+              placeholder={
+                activeTool === 'style' 
+                ? `Describe style (e.g., "${selectedStyle}") or add details...` 
+                : activeTool === 'object'
+                ? 'Describe object to add/remove (e.g., "add a cat on the sofa" or "remove the person on the left")'
+                : `Describe your edit for "${toolDisplayNames[activeTool]}"...`
+              }
+              className="flex-grow resize-none text-sm"
+              rows={2}
+              disabled={isLoading || !currentImageSrc}
+              aria-label="Prompt for image editing"
+            />
+            <Button
+              type="submit"
+              size="lg"
+              disabled={
+                isLoading || 
+                !currentImageSrc ||
+                // Disable if prompt is empty for tools that strictly require it
+                ( (activeTool === 'general' || activeTool === 'background' || activeTool === 'dress' || activeTool === 'object') && !promptText.trim() ) ||
+                // Disable for style tool if both selectedStyle AND promptText are empty
+                ( activeTool === 'style' && !selectedStyle && !promptText.trim() )
+              }
+              className="min-w-[80px] h-auto self-stretch text-sm px-4 py-2"
+            >
+              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Send'}
+            </Button>
+          </div>
+        </form>
+      </CardFooter>
+    </Card>
       
       <AuthModal 
         isOpen={showAuthModal} 
