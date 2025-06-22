@@ -1,22 +1,18 @@
 import type {Metadata} from 'next';
+import { Poppins } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from '@/contexts/AuthContext';
-import { Poppins } from 'next/font/google';
 
-const poppins = Poppins({
+const fontSans = Poppins({
   subsets: ['latin'],
+  variable: '--font-sans',
   weight: ['300', '400', '500', '600', '700', '800'],
-  variable: '--font-poppins',
 });
 
 export const metadata: Metadata = {
   title: 'ImagiGenius - AI Image Editor',
   description: "World's best image editor, powered by Gemini AI.",
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-  },
 };
 
 export default function RootLayout({
@@ -25,10 +21,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className={`dark ${fontSans.variable}`}>
       {/* Default to dark mode. Site styles are in globals.css and tailwind.config.ts */}
-      <head />
-      <body className={`antialiased ${poppins.variable}`}>
+      <body className="antialiased font-body bg-background text-foreground">
         <AuthProvider>
           {children}
           <Toaster />

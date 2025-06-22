@@ -152,15 +152,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
-    if (isLoading) return; // Prevent multiple submissions
-
+    
+    // Check if user is authenticated
     if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to use the AI editing tools.",
-        variant: "default",
-      });
       setShowAuthModal(true);
       return;
     }
@@ -254,15 +248,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
 
       if (resultUri) {
         // Increment usage counter
-        if(user && user.uid) {
+        try {
           await incrementUsageNumber(user.uid);
+        } catch (error) {
+          console.error('Error incrementing usage counter:', error);
+          // Don't fail the operation if usage tracking fails
         }
         
         onImageUpdate(resultUri);
-        addMessageToHistory({ sender: 'ai', image: resultUri, tool: activeTool });
+        addMessageToHistory({ sender: 'ai', text: `${toolDisplayNames[activeTool]} applied successfully!`, image: resultUri });
         toast({ title: "Edit Applied!", description: "Your image has been updated." });
       } else {
-        throw new Error('AI failed to return an image.');
+        throw new Error('AI did not return an image.');
       }
       setPromptText('');
       if(activeTool === 'object' && referenceImageSrc) {
@@ -270,24 +267,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
         // setReferenceImageSrc(null); 
       }
     } catch (error: any) {
-      console.error("AI operation failed:", error);
-      let errorMessage = 'An unexpected error occurred.';
-      if (error.message) {
-          if (error.message.includes('SAFETY')) {
-              errorMessage = 'The request was blocked by the safety filter. Please revise your prompt.';
-          } else if (error.message.includes('DEADLINE_EXCEEDED')) {
-              errorMessage = 'The AI is taking too long to respond. Please try again in a moment.';
-          } else {
-              errorMessage = error.message;
-          }
-      }
-
+      console.error("AI Editing Error:", error);
+      const errorMessage = error.message || "An unknown error occurred during AI processing.";
       addMessageToHistory({ sender: 'system', text: `Error: ${errorMessage}` });
-      toast({
-        title: 'AI Editing Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
+      toast({ title: "AI Error", description: errorMessage, variant: "destructive" });
     } finally {
       setIsLoading(false);
       setGlobalLoading(false);
