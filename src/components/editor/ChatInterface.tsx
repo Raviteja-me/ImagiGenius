@@ -281,7 +281,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
 
   return (
     <>
-    <Card className="w-full h-full flex flex-col shadow-2xl border-none bg-card/70 backdrop-blur-md">
+    <Card className="w-full h-full flex flex-col min-h-0 shadow-2xl border-none bg-card/70 backdrop-blur-md">
         <CardHeader className="p-4 border-b border-border/30 flex-shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-headline flex items-center">
@@ -313,12 +313,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
         </div>
       </CardHeader>
         
-        <CardContent className="flex-grow overflow-hidden p-2 sm:p-4 relative">
+        <CardContent className="flex flex-col flex-grow min-h-0 overflow-hidden p-2 sm:p-4 relative">
           {/* Fixed height scrollable chat area - removed custom scrollbar for mobile compatibility */}
           <div 
-            className="h-64 sm:h-96 w-full overflow-y-auto border border-border/20 rounded-md bg-background/50"
+            className="flex-grow min-h-0 w-full overflow-y-auto border border-border/20 rounded-md bg-background/50 mb-0"
             ref={scrollAreaRef}
             onScroll={handleScroll}
+            style={{ maxHeight: '100%' }}
           >
             <div className="p-2 sm:p-4 space-y-3">
             {chatHistory.map((msg) => (
@@ -359,12 +360,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
             </div>
           </div>
           
-          {/* Debug info - hidden on mobile */}
-          <div className="hidden sm:block text-xs text-muted-foreground mt-2">
-            Messages: {chatHistory.length} | Scroll visible: {showScrollToBottom ? 'Yes' : 'No'}
-          </div>
-          
-          {/* Scroll to bottom button */}
+          {/* No extra margin or padding below chat area. The scroll-to-bottom button remains absolutely positioned. */}
           {showScrollToBottom && (
             <Button
               onClick={scrollToBottom}
@@ -377,10 +373,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
           )}
       </CardContent>
         
-        <CardFooter className="p-2 sm:p-3 border-t border-border/30 flex-shrink-0">
-        <form onSubmit={handleSubmit} className="w-full space-y-2.5">
+        <CardFooter className="p-2 sm:p-3 pb-4 sm:pb-6 border-t border-border/30 flex-shrink-0">
+        <form onSubmit={handleSubmit} className="w-full space-y-1.5 mt-0">
             {/* Tool buttons - Hidden on mobile, show on desktop */}
-            <div className="hidden sm:grid sm:grid-cols-3 md:grid-cols-5 gap-1.5">
+            <div className="hidden sm:grid sm:grid-cols-3 md:grid-cols-5 gap-0.5 mb-0">
             {(Object.keys(toolIcons) as AiTool[]).map(tool => (
               <Button
                 key={tool}
@@ -393,7 +389,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
                      setReferenceImageSrc(null); // Clear reference if not object tool
                    }
                 }}
-                  className="flex-1 text-xs px-1 sm:px-2 justify-center h-8 sm:h-9"
+                  className="flex-1 text-xs px-0.5 sm:px-1 justify-center h-7 sm:h-8 min-h-0"
                 aria-pressed={activeTool === tool}
                 aria-label={`Select ${toolDisplayNames[tool]} tool`}
               >

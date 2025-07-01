@@ -228,7 +228,7 @@ export default function EditorPage() {
         )}
       </header>
 
-      <main className="flex-grow flex overflow-hidden">
+      <main className="flex-grow h-full min-h-0 flex overflow-hidden">
         {/* Mobile Layout */}
         {isMobile ? (
           <div className="w-full flex flex-col">
@@ -255,7 +255,7 @@ export default function EditorPage() {
           </div>
         ) : (
           /* Desktop Layout - Side by side */
-          <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-0">
+          <div className="w-full h-full min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-0">
             <div className="lg:col-span-2 h-full flex items-center justify-center p-4 bg-background/30 relative">
                {isGlobalLoading && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
@@ -264,7 +264,7 @@ export default function EditorPage() {
               )}
               <ImageCanvas imageSrc={imageSrc} />
             </div>
-            <div className="lg:col-span-1 h-full flex flex-col bg-card/60 backdrop-blur-md lg:border-l border-border/50">
+            <div className="lg:col-span-1 h-full min-h-0 flex flex-col bg-card/60 backdrop-blur-md lg:border-l border-border/50">
               <ChatInterface
                 currentImageSrc={imageSrc}
                 onImageUpdate={updateImageAndHistory}
