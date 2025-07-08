@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Sparkles, Wand2, Palette, ImageIcon, SquarePlus } from 'lucide-react';
+import { Loader2, Sparkles, Wand2, Palette, ImageIcon, SquarePlus, Calendar } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -75,6 +75,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Daily Limit Info */}
+          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Daily Usage Limit</span>
+            </div>
+            <p className="text-xs text-blue-700 dark:text-blue-300">
+              <strong>5 AI generations per day</strong> • Resets at midnight • Free to use
+            </p>
           </div>
 
           {/* Sign In Button */}

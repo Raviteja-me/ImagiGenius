@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth, signInWithGoogle, signOutUser, createOrUpdateUser, getUserData, type UserData } from '@/lib/firebase';
+import { auth, signInWithGoogle, signOutUser, createOrUpdateUser, getUserData, canUserGenerate, type UserData } from '@/lib/firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -11,6 +11,7 @@ interface AuthContextType {
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshUserData: () => Promise<void>;
+  checkUsageLimit: () => Promise<{ canGenerate: boolean; remaining: number; message?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,11 +65,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const checkUsageLimit = async () => {
+    if (!user) {
+      return { canGenerate: false, remaining: 0, message: "Please sign in to use AI features." };
+    }
+    
+    // Ensure user data exists before checking limits
+    try {
+      await createOrUpdateUser(user);
+    } catch (error) {
+      console.error('Error ensuring user data exists:', error);
+    }
+    
+    return await canUserGenerate(user.uid);
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
-        await refreshUserData();
+        try {
+          await createOrUpdateUser(user);
+          await refreshUserData();
+        } catch (error) {
+          console.error('Error handling auth state change:', error);
+        }
       } else {
         setUserData(null);
       }
@@ -85,6 +106,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signIn,
     signOut,
     refreshUserData,
+    checkUsageLimit,
   };
 
   return (

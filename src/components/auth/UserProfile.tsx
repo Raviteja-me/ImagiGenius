@@ -1,16 +1,32 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, User, Sparkles, ImageIcon } from 'lucide-react';
+import { LogOut, User, Sparkles, ImageIcon, Calendar } from 'lucide-react';
 
 const UserProfile: React.FC = () => {
-  const { user, userData, signOut } = useAuth();
+  const { user, userData, signOut, checkUsageLimit } = useAuth();
   const { toast } = useToast();
+  const [usageInfo, setUsageInfo] = useState<{ canGenerate: boolean; remaining: number; message?: string } | null>(null);
+
+  useEffect(() => {
+    const fetchUsageInfo = async () => {
+      if (user) {
+        try {
+          const info = await checkUsageLimit();
+          setUsageInfo(info);
+        } catch (error) {
+          console.error('Error fetching usage info:', error);
+        }
+      }
+    };
+
+    fetchUsageInfo();
+  }, [user, checkUsageLimit]);
 
   const handleSignOut = async () => {
     try {
@@ -60,20 +76,39 @@ const UserProfile: React.FC = () => {
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
             <div className="flex items-center gap-2">
               <ImageIcon className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Images Generated</span>
+              <span className="text-sm font-medium">Today's Usage</span>
             </div>
-            <span className="text-lg font-bold text-primary">{userData.usageNumber}</span>
+            <span className="text-lg font-bold text-primary">{userData.usageNumber}/5</span>
           </div>
+          
+          {usageInfo && (
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Remaining Today</span>
+              </div>
+              <span className={`text-lg font-bold ${usageInfo.remaining > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {usageInfo.remaining}
+              </span>
+            </div>
+          )}
           
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
+              <Calendar className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Member Since</span>
             </div>
             <span className="text-sm text-muted-foreground">
               {new Date(userData.createdAt).toLocaleDateString()}
             </span>
           </div>
+        </div>
+
+        {/* Daily Limit Info */}
+        <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+          <p className="text-xs text-blue-700 dark:text-blue-300 text-center">
+            <strong>Daily Limit:</strong> 5 AI generations per day. Resets at midnight.
+          </p>
         </div>
 
         {/* Sign Out Button */}

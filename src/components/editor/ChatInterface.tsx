@@ -59,7 +59,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
   const [isLoading, setIsLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const { toast } = useToast();
-  const { user, userData } = useAuth();
+  const { user, userData, checkUsageLimit } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   
@@ -159,6 +159,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
       return;
     }
 
+    // Check usage limit before proceeding
+    const usageCheck = await checkUsageLimit();
+    
+    if (!usageCheck.canGenerate) {
+      toast({ 
+        title: "Daily Limit Reached", 
+        description: usageCheck.message || "You've reached your daily limit. Come back tomorrow!", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
     const finalPromptText = promptText.trim();
 
      if (!currentImageSrc) {
@@ -199,7 +211,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
           // Should not happen
           return;
     }
-
 
     setIsLoading(true);
     setGlobalLoading(true);
@@ -250,14 +261,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
         // Increment usage counter
         try {
           await incrementUsageNumber(user.uid);
+          // Show remaining generations
+          const updatedUsageCheck = await checkUsageLimit();
+          const remainingMessage = updatedUsageCheck.remaining > 0 
+            ? ` ${updatedUsageCheck.remaining} generations remaining today.`
+            : " No more generations today.";
+          
+          onImageUpdate(resultUri);
+          addMessageToHistory({ sender: 'ai', text: `${toolDisplayNames[activeTool]} applied successfully!${remainingMessage}`, image: resultUri });
+          toast({ title: "Edit Applied!", description: `Your image has been updated.${remainingMessage}` });
         } catch (error) {
-          console.error('Error incrementing usage counter:', error);
           // Don't fail the operation if usage tracking fails
+          onImageUpdate(resultUri);
+          addMessageToHistory({ sender: 'ai', text: `${toolDisplayNames[activeTool]} applied successfully!`, image: resultUri });
+          toast({ title: "Edit Applied!", description: "Your image has been updated." });
         }
-        
-        onImageUpdate(resultUri);
-        addMessageToHistory({ sender: 'ai', text: `${toolDisplayNames[activeTool]} applied successfully!`, image: resultUri });
-        toast({ title: "Edit Applied!", description: "Your image has been updated." });
       } else {
         throw new Error('AI did not return an image.');
       }
