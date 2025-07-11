@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Wand2, ImageIcon, Palette, SquarePlus, Sparkles, MessageSquare, Eraser, UploadCloud, XCircle, ChevronDown } from 'lucide-react';
+import { Loader2, Wand2, ImageIcon, Palette, SquarePlus, Sparkles, MessageSquare, Eraser, UploadCloud, XCircle, ChevronDown, BadgeCheck } from 'lucide-react';
 import { modifyBackground, type ModifyBackgroundInput } from '@/ai/flows/modify-background';
 import { applyStyleTransfer, type ApplyStyleTransferInput } from '@/ai/flows/apply-style-transfer';
 import { addRemoveObjects, type AddRemoveObjectsInput } from '@/ai/flows/add-remove-objects';
@@ -68,6 +68,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
   const referenceFileInputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isUnlimited, setIsUnlimited] = useState(false);
 
   useEffect(() => {
     if (chatHistory.length === 0) {
@@ -85,6 +86,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
        ]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const key = typeof window !== 'undefined' ? localStorage.getItem('geminiApiKey') : null;
+    setIsUnlimited(!!key);
   }, []);
 
   // Auto-scroll to bottom when new messages are added
@@ -154,21 +160,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
     e.preventDefault();
     
     // Check if user is authenticated
-    if (!user) {
+    if (!user && !isUnlimited) {
       setShowAuthModal(true);
       return;
     }
 
-    // Check usage limit before proceeding
-    const usageCheck = await checkUsageLimit();
-    
-    if (!usageCheck.canGenerate) {
-      toast({ 
-        title: "Daily Limit Reached", 
-        description: usageCheck.message || "You've reached your daily limit. Come back tomorrow!", 
-        variant: "destructive" 
-      });
-      return;
+    // Check usage limit before proceeding (only if not unlimited)
+    if (!isUnlimited) {
+      const usageCheck = await checkUsageLimit();
+      if (!usageCheck.canGenerate) {
+        toast({ 
+          title: "Daily Limit Reached", 
+          description: usageCheck.message || "You've reached your daily limit. Come back tomorrow!", 
+          variant: "destructive" 
+        });
+        return;
+      }
     }
 
     const finalPromptText = promptText.trim();
@@ -219,20 +226,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
 
     try {
       let resultUri: string | undefined;
-
+      // Get custom API key if present
+      const customApiKey = typeof window !== 'undefined' ? localStorage.getItem('geminiApiKey') : null;
+      // Pass customApiKey to backend/AI call if needed (pseudo-code, adapt as needed)
       switch (activeTool) {
         case 'general':
-          const generalInput: EditImageWithChatInput = { imageDataUri: currentImageSrc, chatCommand: effectivePrompt };
+          const generalInput: EditImageWithChatInput = { imageDataUri: currentImageSrc, chatCommand: effectivePrompt, apiKey: customApiKey };
           const generalOutput = await editImageWithChat(generalInput);
           resultUri = generalOutput.editedImageDataUri;
           break;
         case 'background':
-          const bgInput: ModifyBackgroundInput = { photoDataUri: currentImageSrc, backgroundDescription: effectivePrompt };
+          const bgInput: ModifyBackgroundInput = { photoDataUri: currentImageSrc, backgroundDescription: effectivePrompt, apiKey: customApiKey };
           const bgOutput = await modifyBackground(bgInput);
           resultUri = bgOutput.modifiedPhotoDataUri;
           break;
         case 'dress':
-          const dressInput: ChangeDressStyleInput = { photoDataUri: currentImageSrc, stylePrompt: effectivePrompt };
+          const dressInput: ChangeDressStyleInput = { photoDataUri: currentImageSrc, stylePrompt: effectivePrompt, apiKey: customApiKey };
           const dressOutput = await changeDressStyle(dressInput);
           resultUri = dressOutput.editedPhotoDataUri;
           break;
@@ -240,6 +249,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
           const styleInput: ApplyStyleTransferInput = { 
             photoDataUri: currentImageSrc, 
             style: effectivePrompt,
+            apiKey: customApiKey
           };
           const styleOutput = await applyStyleTransfer(styleInput);
           resultUri = styleOutput.styledPhotoDataUri;
@@ -249,6 +259,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
             photoDataUri: currentImageSrc, 
             command: effectivePrompt,
             referencePhotoDataUri: referenceImageSrc || undefined,
+            apiKey: customApiKey
           };
           const objectOutput = await addRemoveObjects(objectInput);
           resultUri = objectOutput.modifiedPhotoDataUri;
@@ -258,23 +269,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
       }
 
       if (resultUri) {
-        // Increment usage counter
-        try {
-          await incrementUsageNumber(user.uid);
-          // Show remaining generations
-          const updatedUsageCheck = await checkUsageLimit();
-          const remainingMessage = updatedUsageCheck.remaining > 0 
-            ? ` ${updatedUsageCheck.remaining} generations remaining today.`
-            : " No more generations today.";
-          
+        // Increment usage counter only if not unlimited
+        if (!isUnlimited) {
+          try {
+            await incrementUsageNumber(user.uid);
+            // Show remaining generations
+            const updatedUsageCheck = await checkUsageLimit();
+            const remainingMessage = updatedUsageCheck.remaining > 0 
+              ? ` ${updatedUsageCheck.remaining} generations remaining today.`
+              : " No more generations today.";
+            onImageUpdate(resultUri);
+            addMessageToHistory({ sender: 'ai', text: `${toolDisplayNames[activeTool]} applied successfully!${remainingMessage}`, image: resultUri });
+            toast({ title: "Edit Applied!", description: `Your image has been updated.${remainingMessage}` });
+          } catch (error) {
+            onImageUpdate(resultUri);
+            addMessageToHistory({ sender: 'ai', text: `${toolDisplayNames[activeTool]} applied successfully!`, image: resultUri });
+            toast({ title: "Edit Applied!", description: "Your image has been updated." });
+          }
+        } else {
           onImageUpdate(resultUri);
-          addMessageToHistory({ sender: 'ai', text: `${toolDisplayNames[activeTool]} applied successfully!${remainingMessage}`, image: resultUri });
-          toast({ title: "Edit Applied!", description: `Your image has been updated.${remainingMessage}` });
-        } catch (error) {
-          // Don't fail the operation if usage tracking fails
-          onImageUpdate(resultUri);
-          addMessageToHistory({ sender: 'ai', text: `${toolDisplayNames[activeTool]} applied successfully!`, image: resultUri });
-          toast({ title: "Edit Applied!", description: "Your image has been updated." });
+          addMessageToHistory({ sender: 'ai', text: `${toolDisplayNames[activeTool]} applied successfully! (Unlimited mode)`, image: resultUri });
+          toast({ title: "Edit Applied! (Unlimited)", description: "Your image has been updated with your own API key." });
         }
       } else {
         throw new Error('AI did not return an image.');
@@ -306,32 +321,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ currentImageSrc, onImageU
             <MessageSquare className="mr-2 text-primary h-5 w-5" /> AI Chat Editor
           </CardTitle>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  addMessageToHistory({ 
-                    sender: 'ai', 
-                    text: 'This is a test message to check scrolling functionality. You should see the scroll area working properly now! Try scrolling up and down to see the scroll bar.' 
-                  });
-                }} 
-                title="Test Scroll" 
-                disabled={isLoading}
-              >
-                Test Scroll
+              <Button variant="ghost" size="sm" onClick={() => {
+                setChatHistory([{ id: 'init-cleared', sender: 'system', text: 'Chat cleared. Select a tool and describe your edits. The "Add/Remove Object" tool can use an optional reference image.', timestamp: new Date() }]);
+                setPromptText('');
+                setReferenceImageSrc(null); 
+              }} title="Clear Chat & Reference" disabled={isLoading}>
+                <Eraser className="mr-1 h-3.5 w-3.5" /> Clear
               </Button>
-          <Button variant="ghost" size="sm" onClick={() => {
-            setChatHistory([{ id: 'init-cleared', sender: 'system', text: 'Chat cleared. Select a tool and describe your edits. The "Add/Remove Object" tool can use an optional reference image.', timestamp: new Date() }]);
-            setPromptText('');
-            setReferenceImageSrc(null); 
-          }} title="Clear Chat & Reference" disabled={isLoading}>
-            <Eraser className="mr-1 h-3.5 w-3.5" /> Clear
-          </Button>
             </div>
         </div>
       </CardHeader>
         
         <CardContent className="flex flex-col flex-grow min-h-0 overflow-hidden p-2 sm:p-4 relative">
+          {/* Unlimited badge */}
+          {isUnlimited && (
+            <div className="absolute top-2 right-2 z-10 flex items-center px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">
+              <BadgeCheck className="h-4 w-4 mr-1" /> Unlimited mode (your API key)
+            </div>
+          )}
           {/* Fixed height scrollable chat area - removed custom scrollbar for mobile compatibility */}
           <div 
             className="flex-grow min-h-0 w-full overflow-y-auto border border-border/20 rounded-md bg-background/50 mb-0"

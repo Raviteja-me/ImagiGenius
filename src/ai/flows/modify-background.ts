@@ -18,6 +18,7 @@ const ModifyBackgroundInputSchema = z.object({
       "A photo with the background to be modified, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   backgroundDescription: z.string().describe('The desired background description.'),
+  apiKey: z.string().optional(),
 });
 export type ModifyBackgroundInput = z.infer<typeof ModifyBackgroundInputSchema>;
 
@@ -80,8 +81,11 @@ const modifyBackgroundFlow = ai.defineFlow(
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
       },
+      ...(input.apiKey ? { apiKey: input.apiKey } : {}),
     });
-
-    return {modifiedPhotoDataUri: media.url!};
+    if (!media?.url) {
+      throw new Error('AI did not return a modified image.');
+    }
+    return {modifiedPhotoDataUri: media.url};
   }
 );

@@ -19,6 +19,7 @@ const ChangeDressStyleInputSchema = z.object({
       "A photo containing a person wearing a dress, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   stylePrompt: z.string().describe('The desired style for the dress.'),
+  apiKey: z.string().optional(),
 });
 export type ChangeDressStyleInput = z.infer<typeof ChangeDressStyleInputSchema>;
 
@@ -69,6 +70,7 @@ const changeDressStyleFlow = ai.defineFlow(
           },
         ],
       },
+      ...(input.apiKey ? { apiKey: input.apiKey } : {}),
     });
     if (!media?.url) {
       throw new Error('AI did not return an edited image for the dress style change.');

@@ -22,6 +22,7 @@ const AddRemoveObjectsInputSchema = z.object({
   referencePhotoDataUri: z.optional(z.string().describe(
     "An optional reference photo for guiding the object addition/removal, as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
   )),
+  apiKey: z.string().optional(),
 });
 export type AddRemoveObjectsInput = z.infer<typeof AddRemoveObjectsInputSchema>;
 
@@ -64,6 +65,7 @@ const addRemoveObjectsFlow = ai.defineFlow(
         config: {
             responseModalities: ['TEXT', 'IMAGE'],
         },
+        ...(input.apiKey ? { apiKey: input.apiKey } : {}),
     });
 
     if (!media?.url) {

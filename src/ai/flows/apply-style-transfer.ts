@@ -19,6 +19,7 @@ const ApplyStyleTransferInputSchema = z.object({
       "A photo to be stylized, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   style: z.string().describe('The desired style to apply to the image (e.g., Ghibli, contour, sketch).'),
+  apiKey: z.string().optional(),
 });
 export type ApplyStyleTransferInput = z.infer<typeof ApplyStyleTransferInputSchema>;
 
@@ -54,6 +55,7 @@ const applyStyleTransferFlow = ai.defineFlow(
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
       },
+      ...(input.apiKey ? { apiKey: input.apiKey } : {}),
     });
 
     if (!media?.url) {

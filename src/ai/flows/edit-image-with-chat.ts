@@ -19,6 +19,7 @@ const EditImageWithChatInputSchema = z.object({
       "The image to edit, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   chatCommand: z.string().describe('The chat command to use to edit the image.'),
+  apiKey: z.string().optional(),
 });
 export type EditImageWithChatInput = z.infer<typeof EditImageWithChatInputSchema>;
 
@@ -65,8 +66,11 @@ const editImageWithChatFlow = ai.defineFlow(
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
       },
+      ...(input.apiKey ? { apiKey: input.apiKey } : {}),
     });
-
-    return {editedImageDataUri: media.url!};
+    if (!media?.url) {
+      throw new Error('AI did not return an edited image.');
+    }
+    return {editedImageDataUri: media.url};
   }
 );

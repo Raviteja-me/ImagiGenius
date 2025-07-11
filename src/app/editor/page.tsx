@@ -6,7 +6,7 @@ import ImageCanvas from '@/components/editor/ImageCanvas';
 import ChatInterface from '@/components/editor/ChatInterface';
 import Logo from '@/components/common/Logo';
 import { Button } from '@/components/ui/button';
-import { Home, UploadCloud, Loader2, Undo, Redo, Download, User, Sparkles, MessageSquare, X } from 'lucide-react';
+import { Home, UploadCloud, Loader2, Undo, Redo, Download, User, Sparkles, MessageSquare, X, Settings, BadgeCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +14,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import AuthLoading from '@/components/auth/AuthLoading';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 
 const DEFAULT_PLACEHOLDER_IMAGE = "https://placehold.co/800x600.png?text=Start+Editing!";
 const MAX_HISTORY_SIZE = 10;
@@ -30,6 +32,9 @@ export default function EditorPage() {
 
   const [history, setHistory] = useState<string[]>([]);
   const [currentHistoryIndex, setCurrentHistoryIndex] = useState<number>(-1);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [customApiKey, setCustomApiKey] = useState<string | null>(null);
+  const [apiKeyInput, setApiKeyInput] = useState('');
 
   // Auto-hide chat on mobile when not in use
   useEffect(() => {
@@ -66,6 +71,25 @@ export default function EditorPage() {
     }
     setIsLoadingPersistence(false);
   }, [toast]);
+
+  useEffect(() => {
+    const storedKey = localStorage.getItem('geminiApiKey');
+    if (storedKey) setCustomApiKey(storedKey);
+  }, []);
+
+  const handleSaveApiKey = () => {
+    localStorage.setItem('geminiApiKey', apiKeyInput.trim());
+    setCustomApiKey(apiKeyInput.trim());
+    setShowApiKeyModal(false);
+    toast({ title: 'Custom API Key Saved', description: 'You are now in unlimited mode.' });
+  };
+  const handleRemoveApiKey = () => {
+    localStorage.removeItem('geminiApiKey');
+    setCustomApiKey(null);
+    setApiKeyInput('');
+    setShowApiKeyModal(false);
+    toast({ title: 'Custom API Key Removed', description: 'You are now using the default API key (5 images/day).' });
+  };
 
   const updateImageAndHistory = useCallback((newImageSrc: string) => {
     setImageSrc(newImageSrc);
@@ -201,6 +225,14 @@ export default function EditorPage() {
                 <Home className="h-4 w-4" />
               </Link>
             </Button>
+            {customApiKey && (
+              <span className="flex items-center px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold mr-2">
+                <BadgeCheck className="h-4 w-4 mr-1" /> Unlimited
+              </span>
+            )}
+            <Button variant="ghost" size="icon" onClick={() => setShowApiKeyModal(true)} title="Settings / API Key">
+              <Settings className="h-5 w-5" />
+            </Button>
           </div>
         ) : (
           /* Desktop: Show all buttons */
@@ -223,6 +255,14 @@ export default function EditorPage() {
                <Link href="/">
                 <UploadCloud className="mr-2 h-4 w-4" /> New Upload
               </Link>
+            </Button>
+            {customApiKey && (
+              <span className="flex items-center px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold mr-2">
+                <BadgeCheck className="h-4 w-4 mr-1" /> Unlimited
+              </span>
+            )}
+            <Button variant="ghost" size="icon" onClick={() => setShowApiKeyModal(true)} title="Settings / API Key">
+              <Settings className="h-5 w-5" />
             </Button>
           </div>
         )}
@@ -274,6 +314,31 @@ export default function EditorPage() {
           </div>
         )}
       </main>
+      <Dialog open={showApiKeyModal} onOpenChange={setShowApiKeyModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Custom Gemini API Key</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Paste your own Gemini API key below to unlock unlimited generations. Your key is stored only in your browser.</p>
+            <Input
+              type="text"
+              placeholder="Paste Gemini API Key here..."
+              value={apiKeyInput}
+              onChange={e => setApiKeyInput(e.target.value)}
+              className="w-full"
+            />
+            <div className="flex gap-2">
+              <Button onClick={handleSaveApiKey} disabled={!apiKeyInput.trim()} className="w-full">Save Key</Button>
+              {customApiKey && <Button variant="destructive" onClick={handleRemoveApiKey} className="w-full">Remove Key</Button>}
+            </div>
+            <p className="text-xs text-muted-foreground">Get your key from <a href='https://aistudio.google.com/app/apikey' target='_blank' rel='noopener noreferrer' className='underline'>Google AI Studio</a>.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowApiKeyModal(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
